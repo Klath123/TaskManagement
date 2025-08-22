@@ -1,19 +1,38 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from "react-router-dom";
 import { useAuth } from '../contexts/authContext';
 
 const SubscriptionRoute = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
 
-  // If not logged in, redirect to login
-  if (!currentUser) return <Navigate to="/login" />;
-
-  // If user has no plan or plan is not active, redirect to PlanPage
-  if (!currentUser.plan || currentUser.plan.status !== "active") {
-    return <Navigate to="/plans" />;
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Else, allow access
+  // If not logged in, redirect to login
+  if (!currentUser) {
+    console.log('SubscriptionRoute: No user found, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check subscription status
+  const hasActivePlan = currentUser.plan && currentUser.plan.status === "active";
+  
+  if (!hasActivePlan) {
+    console.log('SubscriptionRoute: No active plan found, redirecting to plans');
+    console.log('Current user plan:', currentUser.plan);
+    return <Navigate to="/plans" replace />;
+  }
+
+  console.log('SubscriptionRoute: User has active plan, allowing access');
   return children;
 };
 
