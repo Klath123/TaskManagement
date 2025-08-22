@@ -8,8 +8,10 @@ const SubscriptionRoute = ({ children }) => {
   // If not logged in, redirect to login
   if (!currentUser) return <Navigate to="/login" />;
 
-  // If user has no plan, redirect to PlanPage
-  if (!currentUser.plan || currentUser.plan === 'none') return <Navigate to="/plans" />;
+  // If user has no plan or plan is not active, redirect to PlanPage
+  if (!currentUser.plan || currentUser.plan.status !== "active") {
+    return <Navigate to="/plans" />;
+  }
 
   // Else, allow access
   return children;
