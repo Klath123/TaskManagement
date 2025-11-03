@@ -1,6 +1,5 @@
 # TaskFlow: Full-Stack Task Management App
 
-[![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/Klath123/TaskManagement.git)
 
 TaskFlow is a comprehensive full-stack task management application featuring a subscription-based model. It provides a seamless experience for users to register, subscribe, and manage their daily tasks. The application is built with a React frontend and a Node.js/Express backend, utilizing Firebase for authentication and data storage, and Razorpay for payment processing.
 
