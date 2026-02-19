@@ -1,9 +1,338 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, CheckCircle, Circle, Trash2, Edit3, Filter } from 'lucide-react';
+import { Plus, Calendar, CheckCircle, Circle, Trash2, Edit3 } from 'lucide-react';
 import { format, isToday, isPast } from 'date-fns';
 import toast from 'react-hot-toast';
 import { taskAPI } from '../services/api';
 import TaskForm from './TaskForm';
+
+const taskListStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+  .tl-root {
+    font-family: 'DM Sans', sans-serif;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+     background: #000000;
+     height: 100vh;
+  }
+
+  /* ── Header ── */
+  .tl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    animation: tlFadeUp 0.4s ease both;
+  }
+
+  .tl-heading {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+  }
+
+  .tl-heading span {
+    background: linear-gradient(90deg, #c8f135, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tl-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 20px;
+    border-radius: 13px;
+    background: #c8f135;
+    color: #080a0f;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 26px rgba(200,241,53,0.3);
+    white-space: nowrap;
+  }
+
+  .tl-add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 44px rgba(200,241,53,0.5);
+  }
+
+  .tl-add-btn svg { width: 16px; height: 16px; }
+
+  /* ── Filter tabs ── */
+  .tl-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.75rem;
+    animation: tlFadeUp 0.4s 0.05s ease both;
+    flex-wrap: wrap;
+  }
+
+  .tl-filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .tl-filter-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #94a3b8;
+  }
+
+  .tl-filter-btn.active {
+    background: rgba(200,241,53,0.1);
+    border-color: rgba(200,241,53,0.3);
+    color: #c8f135;
+  }
+
+  .tl-filter-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.07);
+    color: #475569;
+  }
+
+  .tl-filter-btn.active .tl-filter-count {
+    background: rgba(200,241,53,0.15);
+    color: #c8f135;
+  }
+
+  /* ── Loading ── */
+  .tl-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+  }
+
+  .tl-spin {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(200,241,53,0.15);
+    border-top-color: #c8f135;
+    border-radius: 50%;
+    animation: tlSpin 0.7s linear infinite;
+  }
+
+  @keyframes tlSpin { to { transform: rotate(360deg); } }
+
+  /* ── Empty state ── */
+  .tl-empty {
+    text-align: center;
+    padding: 4rem 1rem;
+    animation: tlFadeUp 0.4s ease both;
+  }
+
+  .tl-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+  }
+
+  .tl-empty h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 0.4rem;
+  }
+
+  .tl-empty p {
+    color: #475569;
+    font-size: 0.88rem;
+    margin: 0 0 1.5rem;
+  }
+
+  .tl-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border-radius: 12px;
+    background: rgba(200,241,53,0.1);
+    border: 1px solid rgba(200,241,53,0.28);
+    color: #c8f135;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+
+  .tl-empty-btn:hover {
+    background: rgba(200,241,53,0.18);
+    transform: translateY(-2px);
+  }
+
+  /* ── Task cards ── */
+  .tl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .tl-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid transparent;
+    border-radius: 16px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    animation: tlFadeUp 0.35s ease both;
+    backdrop-filter: blur(8px);
+  }
+
+  .tl-card:hover {
+    background: rgba(255,255,255,0.06);
+    transform: translateX(3px);
+  }
+
+  /* Priority border colors */
+  .tl-card.overdue   { border-left-color: #ef4444; box-shadow: -2px 0 12px rgba(239,68,68,0.1); }
+  .tl-card.today     { border-left-color: #fbbf24; box-shadow: -2px 0 12px rgba(251,191,36,0.1); }
+  .tl-card.completed { border-left-color: #4ade80; box-shadow: -2px 0 12px rgba(74,222,128,0.08); opacity: 0.7; }
+  .tl-card.upcoming  { border-left-color: #38bdf8; box-shadow: -2px 0 12px rgba(56,189,248,0.08); }
+
+  /* Toggle button */
+  .tl-toggle {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    color: #334155;
+    transition: color 0.2s, transform 0.2s;
+    margin-top: 2px;
+  }
+
+  .tl-toggle:hover { transform: scale(1.15); }
+  .tl-toggle.done  { color: #4ade80; }
+  .tl-toggle.pending:hover { color: #4ade80; }
+  .tl-toggle svg { width: 22px; height: 22px; }
+
+  /* Card body */
+  .tl-body { flex: 1; min-width: 0; }
+
+  .tl-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .tl-task-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 0.25rem;
+    line-height: 1.3;
+  }
+
+  .tl-task-title.done {
+    color: #334155;
+    text-decoration: line-through;
+  }
+
+  .tl-task-desc {
+    font-size: 0.82rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Actions */
+  .tl-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .tl-icon-btn {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: none;
+    border: 1px solid transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #475569;
+    transition: all 0.18s;
+  }
+
+  .tl-icon-btn svg { width: 14px; height: 14px; }
+
+  .tl-icon-btn.edit:hover {
+    background: rgba(56,189,248,0.1);
+    border-color: rgba(56,189,248,0.25);
+    color: #38bdf8;
+  }
+
+  .tl-icon-btn.del:hover {
+    background: rgba(239,68,68,0.1);
+    border-color: rgba(239,68,68,0.25);
+    color: #ef4444;
+  }
+
+  /* Meta row */
+  .tl-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .tl-date {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: #475569;
+  }
+
+  .tl-date svg { width: 12px; height: 12px; }
+  .tl-date.overdue  { color: #ef4444; font-weight: 600; }
+  .tl-date.today    { color: #fbbf24; font-weight: 600; }
+
+  .tl-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .tl-badge.overdue   { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .tl-badge.today     { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+  .tl-badge.completed { background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+  .tl-badge.upcoming  { background: rgba(56,189,248,0.12); color: #38bdf8; border: 1px solid rgba(56,189,248,0.2); }
+
+  @keyframes tlFadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`;
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
@@ -12,6 +341,14 @@ const TaskList = () => {
   const [filter, setFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+
+  useEffect(() => {
+    if (document.getElementById('task-list-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'task-list-styles';
+    s.textContent = taskListStyles;
+    document.head.appendChild(s);
+  }, []);
 
   const fetchTasks = async () => {
     try {
@@ -25,31 +362,17 @@ const TaskList = () => {
     }
   };
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  useEffect(() => { fetchTasks(); }, []);
 
   useEffect(() => {
-    let filtered = tasks;
-    
-    if (filter !== 'all') {
-      filtered = tasks.filter(task => task.status === filter);
-    }
-    
-    setFilteredTasks(filtered);
+    setFilteredTasks(filter === 'all' ? tasks : tasks.filter(t => t.status === filter));
   }, [tasks, filter]);
 
-  const handleToggleTask = async (taskId, currentStatus) => {
+  const handleToggleTask = async (taskId) => {
     try {
       const response = await taskAPI.toggleTask(taskId);
-      setTasks(tasks.map(task => 
-        task.id === taskId ? response.data : task
-      ));
-      toast.success(
-        response.data.status === 'completed' 
-          ? 'Task marked as completed!' 
-          : 'Task marked as pending!'
-      );
+      setTasks(tasks.map(t => t.id === taskId ? response.data : t));
+      toast.success(response.data.status === 'completed' ? 'Task completed! 🎉' : 'Task marked pending');
     } catch (error) {
       toast.error('Failed to update task');
       console.error('Error toggling task:', error);
@@ -57,14 +380,11 @@ const TaskList = () => {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
     try {
       await taskAPI.deleteTask(taskId);
-      setTasks(tasks.filter(task => task.id !== taskId));
-      toast.success('Task deleted successfully!');
+      setTasks(tasks.filter(t => t.id !== taskId));
+      toast.success('Task deleted');
     } catch (error) {
       toast.error('Failed to delete task');
       console.error('Error deleting task:', error);
@@ -85,195 +405,145 @@ const TaskList = () => {
     return 'upcoming';
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'overdue': return 'border-l-red-500 bg-red-50';
-      case 'today': return 'border-l-yellow-500 bg-yellow-50';
-      case 'completed': return 'border-l-green-500 bg-green-50';
-      default: return 'border-l-blue-500 bg-blue-50';
-    }
-  };
-
   const formatDueDate = (dueDate) => {
     const date = new Date(dueDate);
     if (isToday(date)) return 'Today';
     return format(date, 'MMM dd, yyyy');
   };
 
+  const BADGE_LABELS = {
+    overdue: 'Overdue',
+    today: 'Due Today',
+    completed: 'Completed',
+    upcoming: 'Pending',
+  };
+
+  const filters = [
+    { key: 'all',       label: 'All',       count: tasks.length },
+    { key: 'pending',   label: 'Pending',   count: tasks.filter(t => t.status === 'pending').length },
+    { key: 'completed', label: 'Completed', count: tasks.filter(t => t.status === 'completed').length },
+  ];
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="tl-loading">
+        <div className="tl-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="tl-root">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Tasks</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Task
+      <div className="tl-header">
+        <h1 className="tl-heading">My <span>Tasks</span></h1>
+        <button className="tl-add-btn" onClick={() => setShowForm(true)}>
+          <Plus /> Add Task
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        {[
-          { key: 'all', label: 'All Tasks', count: tasks.length },
-          { key: 'pending', label: 'Pending', count: tasks.filter(t => t.status === 'pending').length },
-          { key: 'completed', label: 'Completed', count: tasks.filter(t => t.status === 'completed').length }
-        ].map(({ key, label, count }) => (
+      <div className="tl-filters">
+        {filters.map(({ key, label, count }) => (
           <button
             key={key}
+            className={`tl-filter-btn${filter === key ? ' active' : ''}`}
             onClick={() => setFilter(key)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              filter === key
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
           >
-            <Filter className="w-4 h-4" />
             {label}
-            <span className={`px-2 py-1 rounded-full text-xs ${
-              filter === key ? 'bg-indigo-500' : 'bg-gray-100 text-gray-600'
-            }`}>
-              {count}
-            </span>
+            <span className="tl-filter-count">{count}</span>
           </button>
         ))}
       </div>
 
-      {/* Task List */}
-      <div className="space-y-4">
-        {filteredTasks.length === 0 ? (
-          <div className="text-center py-12">
-            <CheckCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {filter === 'all' ? 'No tasks yet' : `No ${filter} tasks`}
-            </h3>
-            <p className="text-gray-500 mb-6">
-              {filter === 'all' 
-                ? 'Create your first task to get started!' 
-                : `No ${filter} tasks found.`}
-            </p>
-            {filter === 'all' && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Create Task
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredTasks.map((task) => {
+      {/* List */}
+      {filteredTasks.length === 0 ? (
+        <div className="tl-empty">
+          <div className="tl-empty-icon">✦</div>
+          <h3>{filter === 'all' ? 'No tasks yet' : `No ${filter} tasks`}</h3>
+          <p>
+            {filter === 'all'
+              ? 'Create your first task to get started!'
+              : `No ${filter} tasks found.`}
+          </p>
+          {filter === 'all' && (
+            <button className="tl-empty-btn" onClick={() => setShowForm(true)}>
+              <Plus size={14} /> Create Task
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="tl-list">
+          {filteredTasks.map((task, i) => {
             const priority = getTaskPriority(task.dueDate, task.status);
             return (
               <div
                 key={task.id}
-                className={`bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 p-6 hover:shadow-md transition-shadow ${getPriorityColor(priority)}`}
+                className={`tl-card ${priority}`}
+                style={{ animationDelay: `${i * 0.04}s` }}
               >
-                <div className="flex items-start gap-4">
-                  <button
-                    onClick={() => handleToggleTask(task.id, task.status)}
-                    className="flex-shrink-0 mt-1"
-                  >
-                    {task.status === 'completed' ? (
-                      <CheckCircle className="w-6 h-6 text-green-500" />
-                    ) : (
-                      <Circle className="w-6 h-6 text-gray-400 hover:text-green-500 transition-colors" />
-                    )}
-                  </button>
+                {/* Toggle */}
+                <button
+                  className={`tl-toggle ${task.status === 'completed' ? 'done' : 'pending'}`}
+                  onClick={() => handleToggleTask(task.id)}
+                >
+                  {task.status === 'completed'
+                    ? <CheckCircle />
+                    : <Circle />}
+                </button>
 
-                  <div className="flex-grow">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className={`text-lg font-semibold ${
-                          task.status === 'completed' 
-                            ? 'text-gray-500 line-through' 
-                            : 'text-gray-900'
-                        }`}>
-                          {task.title}
-                        </h3>
-                        {task.description && (
-                          <p className={`mt-2 ${
-                            task.status === 'completed' 
-                              ? 'text-gray-400' 
-                              : 'text-gray-600'
-                          }`}>
-                            {task.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={() => {
-                            setEditingTask(task);
-                            setShowForm(true);
-                          }}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                {/* Body */}
+                <div className="tl-body">
+                  <div className="tl-top">
+                    <div>
+                      <p className={`tl-task-title${task.status === 'completed' ? ' done' : ''}`}>
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="tl-task-desc">{task.description}</p>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-4 mt-4 text-sm">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <Calendar className="w-4 h-4" />
-                        <span className={
-                          priority === 'overdue' ? 'text-red-600 font-medium' :
-                          priority === 'today' ? 'text-yellow-600 font-medium' :
-                          'text-gray-500'
-                        }>
-                          Due: {formatDueDate(task.dueDate)}
-                        </span>
-                      </div>
-                      
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        task.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : priority === 'overdue'
-                          ? 'bg-red-100 text-red-800'
-                          : priority === 'today'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {task.status === 'completed' ? 'Completed' :
-                         priority === 'overdue' ? 'Overdue' :
-                         priority === 'today' ? 'Due Today' : 'Pending'}
-                      </span>
+                    {/* Action buttons */}
+                    <div className="tl-actions">
+                      <button
+                        className="tl-icon-btn edit"
+                        onClick={() => { setEditingTask(task); setShowForm(true); }}
+                      >
+                        <Edit3 />
+                      </button>
+                      <button
+                        className="tl-icon-btn del"
+                        onClick={() => handleDeleteTask(task.id)}
+                      >
+                        <Trash2 />
+                      </button>
                     </div>
+                  </div>
+
+                  {/* Meta */}
+                  <div className="tl-meta">
+                    <span className={`tl-date ${priority === 'overdue' || priority === 'today' ? priority : ''}`}>
+                      <Calendar />
+                      {formatDueDate(task.dueDate)}
+                    </span>
+                    <span className={`tl-badge ${priority}`}>
+                      {BADGE_LABELS[priority]}
+                    </span>
                   </div>
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
       {/* Task Form Modal */}
       {showForm && (
         <TaskForm
           task={editingTask}
           onSubmit={handleFormSubmit}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingTask(null);
-          }}
+          onCancel={() => { setShowForm(false); setEditingTask(null); }}
         />
       )}
     </div>
